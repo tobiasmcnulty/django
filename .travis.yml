@@ -1,0 +1,40 @@
+language: python
+services:
+  - memcached
+  - postgresql
+  - mysql
+python:
+  - "3.5" # Actual Python versions determined by TOX_ENV
+addons:
+  postgresql: "9.4"
+  apt:
+    packages:
+      - libenchant-dev
+      - hunspell-en-us # includes 'Mozilla', 'rasters', 'parallelization', others
+      - wamerican # should be installed by default; just in case
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+  - psql -c 'create database travis_ci_test2;' -U postgres
+  - mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql
+  - mysql -e 'create database travis_ci_test;'
+  - mysql -e 'create database travis_ci_test2;'
+install:
+  - pip install -U pip  # make sure we have the latest version
+  - pip install tox
+  - pip install coveralls
+script:
+  - tox $TOX_OPTS
+after_success:
+  - coveralls
+env:
+  - TOX_OPTS="-e flake8"
+  - TOX_OPTS="-e docs"
+  - TOX_OPTS="-e isort"
+  - TOX_OPTS="-e py27-postgres -- --settings=settings_travis_postgres --parallel=1"
+  - TOX_OPTS="-e py27 -- --parallel=1"
+  - TOX_OPTS="-e py27-mysql -- --settings=settings_travis_mysql --parallel=1"
+  - TOX_OPTS="-e py35-postgres -- --settings=settings_travis_postgres --parallel=1"
+  - TOX_OPTS="-e py35 -- --parallel=1"
+  - TOX_OPTS="-e py35-mysql -- --settings=settings_travis_mysql --parallel=1"
+# Adding sudo: False tells Travis to use their container-based infrastructure, which is somewhat faster.
+sudo: False
